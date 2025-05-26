@@ -1,0 +1,58 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+# Load the dataset
+df = pd.read_csv('titanic.csv')  # Make sure titanic.csv is in the same folder
+
+# Display basic information
+print("Dataset Info:\n", df.info())
+print("\nMissing values:\n", df.isnull().sum())
+
+# Step 1: Handle Missing Values
+# Fill Age with median
+df['Age'].fillna(df['Age'].median(), inplace=True)
+
+# Fill Embarked with mode
+df['Embarked'].fillna(df['Embarked'].mode()[0], inplace=True)
+
+# Drop Cabin column (too many missing values)
+df.drop(columns=['Cabin'], inplace=True)
+
+# Step 2: Encode Categorical Variables
+le = LabelEncoder()
+df['Sex'] = le.fit_transform(df['Sex'])
+df['Embarked'] = le.fit_transform(df['Embarked'])
+
+# Step 3: Standardize Numerical Features
+scaler = StandardScaler()
+df[['Age', 'Fare']] = scaler.fit_transform(df[['Age', 'Fare']])
+
+# Step 4: Outlier Detection and Removal using IQR
+def remove_outliers_iqr(data, features):
+    for feature in features:
+        Q1 = data[feature].quantile(0.25)
+        Q3 = data[feature].quantile(0.75)
+        IQR = Q3 - Q1
+        lower = Q1 - 1.5 * IQR
+        upper = Q3 + 1.5 * IQR
+        data = data[(data[feature] >= lower) & (data[feature] <= upper)]
+    return data
+
+df = remove_outliers_iqr(df, ['Age', 'Fare'])
+
+# Step 5: Visualize Boxplots for Outliers (Post-Cleaning)
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df[['Age', 'Fare']])
+plt.title("Boxplot of Age and Fare (After Outlier Removal)")
+plt.show()
+
+# Display final dataset info
+print("\nCleaned Dataset Info:\n", df.info())
+
+# Optional: Save cleaned dataset
+df.to_csv('titanic_cleaned.csv', index=False)
+
